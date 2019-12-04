@@ -1,0 +1,113 @@
+---
+title: "Genius"
+author: "Gustav Helms"
+date: "11/17/2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+library(pacman)
+p_load("spotifyr", "tidyverse", "knitr", "lubridate", "ggjoy", "genius", "dplyr", "Sentida")
+devtools::install_github('charlie86/spotifyr')
+```
+
+## Importing the relevant albums and binding them together to one dataframe
+```{r}
+#Importing the album's lyrics
+forbandede_ungdom <- genius_album(artist = "ukendt kunstner", album = "forbandede ungdom", info = "artist")
+den_anden_side <- genius_album(artist = "ukendt kunstner", album = "den anden side", info = "artist")
+neonlys <- genius_album(artist = "ukendt kunstner", album = "neonlys", info = "artist")
+hjertebank <- genius_album(artist = "barselona", album = "hjertebank", info = "artist")
+legebørn <- genius_album(artist = "barselona", album = "legebørn", info = "artist")
+syv_sind <- genius_album(artist = "flødeklinikken", album = "syv sind", info = "artist")
+shu_bi_dua <- genius_album(artist = "shu-bi-dua", album = "40-ars-shu-bi-lum-de-40-strste-hits", info = "artist")
+tidens_tern <- genius_album(artist = "cv-jrgensen", album = "tidens tern", info = "artist")
+troen_ingen <- genius_album(artist = "Sren-huss", album = "troen-ingen", info = "artist")
+fra_kæreste_til_grin <- genius_album("rasmus nhr", album = "Fra-kreste-til-grin", info = "artist")
+grand_prix <- genius_album("ulige numre", album = "grand prix", info = "artist")
+solkongen <- genius_album("the minds of 99", album = "solkongen", info = "artist")
+liber <- genius_album("the minds of 99", album = "liber", info = "artist")
+the_minds_of_99 <- genius_album("the minds of 99", album = "the minds of 99", info = "artist")
+cassiopeia <- genius_album("loc", album = "cassiopeia", info = "artist")
+libertiner <- genius_album("loc", album = "libertiner", info = "artist")
+sakrilegium <- genius_album("loc", album = "sakrilegium", info = "artist")
+dominologi <- genius_album("loc", album = "dominologi", info = "artist")
+smash_hit_in_aberdeen <- genius_album("malk de koijn", album = "smash hit in aberdeen", info = "artist")
+sneglzilla <- genius_album("malk de koijn", album = "sneglzilla", info = "artist")
+toback_to_the_fromtime <- genius_album("malk de koijn", album = "toback to the fromtime", info = "artist")
+på_den_anden_side <- genius_album("peter sommer", album = "pa den anden side", info = "artist")
+
+
+#binding the all the imported data frames of the lyrics into one.
+all_albums<- bind_rows(forbandede_ungdom,den_anden_side,neonlys,hjertebank,legebørn,syv_sind,shu_bi_dua,tidens_tern,troen_ingen,fra_kæreste_til_grin, grand_prix, solkongen, liber, the_minds_of_99, cassiopeia, libertiner, sakrilegium, dominologi, smash_hit_in_aberdeen, sneglzilla, toback_to_the_fromtime, på_den_anden_side)
+```
+
+## Preparing the dataframe for further analysis
+```{r}
+#making song tittle as factor
+all_albums$track_title <- as.factor(all_albums
+                                  $track_title)
+all_albums$artist <- as.factor(all_albums
+                                  $artist)
+#Removing various qoutations
+all_albums$lyric<- str_remove_all(all_albums
+                                $lyric,"[:digit:]")
+#Removing all the rows with na's
+all_albums<- all_albums[complete.cases(all_albums),]
+
+
+#Making a sentiment collumn
+all_albums$sentiment <- lapply(all_albums$lyric, sentida, output = "total")
+#setting sentiment as numeric
+all_albums$sentiment <- as.numeric(all_albums$sentiment)
+```
+
+
+## Now the dataframe are ready for analysis
+```{r}
+#mean sentiment for every artist
+valence_song <- all_albums%>%
+  group_by(artist)%>%
+  summarise(mean(sentiment)) 
+
+
+#Sorting the songs
+valence_song %>% arrange(desc(valence_song$`mean(sentiment)`))
+
+
+#Arranging by valence for every lyric line
+all_albums%>% 
+    arrange(sentiment) %>%  #for descending insert a "-" in front of "sentiment
+    select(track_title, lyric, sentiment) %>% 
+    head(100) %>% 
+    kable()
+```
+
+
+## Making two new dataframes where the specific lines can be picked out. 
+```{r}
+#Sorting by sentimant 
+asscending <- all_albums[order(all_albums$sentiment),]
+descending <- all_albums[order(-all_albums$sentiment),]
+
+#Making a new dataframe for the picked out lyrics by row
+stimulus <- bind_rows(asscending[c(3,7,17,22,41),],descending[c(27,32,58,75,281),])
+
+#Making the mean sentiment collumn
+stimulus$sentiment_mean <- lapply(stimulus$lyric, sentida, output = "mean")
+stimulus$sentiment_mean <- as.numeric(stimulus$sentiment_mean)
+```
+
+## #Exporting the picked out stimulus to .csv fil
+```{r}
+write.csv(stimulus,"lyric_stimulus.csv", row.names = FALSE)
+```
+
+
+
+## Visualising the whole 
+```{r}
+ggplot(valence_song, aes(artist,`mean(sentiment)`, colour = artist))+
+  geom_point()
+```
+
