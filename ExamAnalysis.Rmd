@@ -9,22 +9,85 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-## R Markdown
-
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
-
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
-
-```{r cars}
-summary(cars)
+```{r}
+#Set up
+library(pacman)
+pacman::p_load(tidyverse)
 ```
 
-## Including Plots
+## Preparing the data
+```{r}
+#Importing the filenames into a vector 
+files <- list.files(path = "Logfiles",   
+                    pattern = ".csv",  #everything that contains '.csv' in its name will be listed
+                    full.names = T)    #makes it include directory path, so instead of 'logfile_1.csv' it will be 'data/logfile_1.csv')
 
-You can also embed plots, for example:
+#Reading all the filenames and binding them into a dataframe
+df <- lapply(files, read_csv) %>% bind_rows()
 
-```{r pressure, echo=FALSE}
-plot(pressure)
+
+#Maybe make a loop if more skillful for changing picture number
+df <- df %>% mutate(Picture_no = replace(Picture_no, which(Picture_no == "01" & Picture_gender == "F"), "11"))
+df <- df %>% mutate(Picture_no = replace(Picture_no, which(Picture_no == "02" & Picture_gender == "F"), "12"))
+df <- df %>% mutate(Picture_no = replace(Picture_no, which(Picture_no == "03" & Picture_gender == "F"), "13"))
+df <- df %>% mutate(Picture_no = replace(Picture_no, which(Picture_no == "04" & Picture_gender == "F"), "14"))
+df <- df %>% mutate(Picture_no = replace(Picture_no, which(Picture_no == "05" & Picture_gender == "F"), "15"))
+df <- df %>% mutate(Picture_no = replace(Picture_no, which(Picture_no == "06" & Picture_gender == "F"), "16"))
+df <- df %>% mutate(Picture_no = replace(Picture_no, which(Picture_no == "07" & Picture_gender == "F"), "17"))
+df <- df %>% mutate(Picture_no = replace(Picture_no, which(Picture_no == "08" & Picture_gender == "F"), "18"))
+df <- df %>% mutate(Picture_no = replace(Picture_no, which(Picture_no == "09" & Picture_gender == "F"), "19"))
+df <- df %>% mutate(Picture_no = replace(Picture_no, which(Picture_no == "10" & Picture_gender == "F"), "20"))
+
+#Changing variables to right class
+df$Name <- as.factor(df$Name)
+df$Name <- as.numeric(df$Name) #making the names anonymous
+df$Name <- as.factor(df$Name)
+df$Gender <- as.factor(df$Gender)
+df$Condition <- as.factor(df$Condition)
+df$Picture_no <- as.factor(df$Picture_no)
+df$Picture_gender <- as.factor(df$Picture_gender)
+df$Stimulus <- as.factor(df$Stimulus)
+df$Stimulus_no <- as.factor(df$Stimulus_no)
+df$Mood <- as.factor(df$Mood)
+df$Artist <- as.factor(df$Artist)
+
+#Making the "JPG" stimuli valence score comparable to the "wav" stimulus valence
+df$Valence[df$Stimulus=="jpg" & !is.na(df$Stimulus)] <- (df$Valence[df$Stimulus=="jpg" & !is.na(df$Stimulus)]/10)+0.5
+
 ```
 
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+## Making two new dataframes
+```{r}
+#Making two new dataframes
+baseline <- subset(df, Condition == 0)
+baseline <- select(baseline, -c(Artist:Mood))
+primed <- subset(df, Condition == 1)
+```
+
+
+## First visualization of the data
+```{r}
+#Visualizing mean rating for each picture in each condition
+ggplot(df, aes(Picture_no,Rating, fill=Condition))+
+  stat_summary(fun.y = mean, geom = "bar", position = "dodge" )
+
+```
+
+
+## Playing with some group_by functions
+```{r}
+#Mean of each group
+df %>% group_by(Mood,Stimulus) %>% summarise(mean(Valence))
+
+primed %>% group_by(Mood) %>% summarise(mean(Rating))
+
+stim <- primed %>% group_by(Mood,Picture_no) %>% summarise(mean(Rating))
+
+picture <- baseline %>% group_by(Picture_no) %>% summarise(mean(Rating))
+
+picture$mean_sad_stim <- stim[stim$Mood=="Sad",3]
+
+picture$mean_happy_stim <- stim[stim$Mood=="Hap",3]
+```
+
+
