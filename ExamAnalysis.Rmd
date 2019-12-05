@@ -69,7 +69,18 @@ primed <- subset(df, Condition == 1)
 ```{r}
 #Visualizing mean rating for each picture in each condition
 ggplot(df, aes(Picture_no,Rating, fill=Condition))+
-  stat_summary(fun.y = mean, geom = "bar", position = "dodge" )
+  stat_summary(fun.y = mean, geom = "bar", position = "dodge" )+
+  ggtitle("Comparing mean rating for different pictures by conditions")
+
+ggplot(df,aes(Valence,Rating, colour = Stimulus, shape = Stimulus))+
+  geom_point()+
+  geom_smooth(method = "lm")+
+  ggtitle("Rating after priming by valence")
+
+ggplot(baseline, aes(Picture_no,Rating, fill = Picture_gender))+
+  stat_summary(fun.y = mean,geom = "bar")+
+  stat_summary(fun.data = mean_cl_normal, geom = "errorbar", width = 0.2)+
+  ggtitle("Baseline rating of the pictures")
 
 ```
 
@@ -83,11 +94,13 @@ primed %>% group_by(Mood) %>% summarise(mean(Rating))
 
 stim <- primed %>% group_by(Mood,Picture_no) %>% summarise(mean(Rating))
 
-picture <- baseline %>% group_by(Picture_no) %>% summarise(mean(Rating))
+no_stim<- baseline %>% group_by(Picture_no) %>% summarise(mean(Rating))
 
-picture$mean_sad_stim <- stim[stim$Mood=="Sad",3]
+no_stim$mean_sad_stim <- stim[stim$Mood=="Sad",3]
 
-picture$mean_happy_stim <- stim[stim$Mood=="Hap",3]
+no_stim$mean_happy_stim <- stim[stim$Mood=="Hap",3]
+
+
 ```
 
 
