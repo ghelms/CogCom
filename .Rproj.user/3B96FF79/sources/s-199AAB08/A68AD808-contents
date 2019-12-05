@@ -1,0 +1,106 @@
+---
+title: "CogComExam"
+author: "Gustav Helms"
+date: "4/12/2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+#Set up
+library(pacman)
+pacman::p_load(tidyverse)
+```
+
+## Preparing the data
+```{r}
+#Importing the filenames into a vector 
+files <- list.files(path = "Logfiles",   
+                    pattern = ".csv",  #everything that contains '.csv' in its name will be listed
+                    full.names = T)    #makes it include directory path, so instead of 'logfile_1.csv' it will be 'data/logfile_1.csv')
+
+#Reading all the filenames and binding them into a dataframe
+df <- lapply(files, read_csv) %>% bind_rows()
+
+
+#Maybe make a loop if more skillful for changing picture number
+df <- df %>% mutate(Picture_no = replace(Picture_no, which(Picture_no == "01" & Picture_gender == "F"), "11"))
+df <- df %>% mutate(Picture_no = replace(Picture_no, which(Picture_no == "02" & Picture_gender == "F"), "12"))
+df <- df %>% mutate(Picture_no = replace(Picture_no, which(Picture_no == "03" & Picture_gender == "F"), "13"))
+df <- df %>% mutate(Picture_no = replace(Picture_no, which(Picture_no == "04" & Picture_gender == "F"), "14"))
+df <- df %>% mutate(Picture_no = replace(Picture_no, which(Picture_no == "05" & Picture_gender == "F"), "15"))
+df <- df %>% mutate(Picture_no = replace(Picture_no, which(Picture_no == "06" & Picture_gender == "F"), "16"))
+df <- df %>% mutate(Picture_no = replace(Picture_no, which(Picture_no == "07" & Picture_gender == "F"), "17"))
+df <- df %>% mutate(Picture_no = replace(Picture_no, which(Picture_no == "08" & Picture_gender == "F"), "18"))
+df <- df %>% mutate(Picture_no = replace(Picture_no, which(Picture_no == "09" & Picture_gender == "F"), "19"))
+df <- df %>% mutate(Picture_no = replace(Picture_no, which(Picture_no == "10" & Picture_gender == "F"), "20"))
+
+#Changing variables to right class
+df$Name <- as.factor(df$Name)
+df$Name <- as.numeric(df$Name) #making the names anonymous
+df$Name <- as.factor(df$Name)
+df$Gender <- as.factor(df$Gender)
+df$Condition <- as.factor(df$Condition)
+df$Picture_no <- as.factor(df$Picture_no)
+df$Picture_gender <- as.factor(df$Picture_gender)
+df$Stimulus <- as.factor(df$Stimulus)
+df$Stimulus_no <- as.factor(df$Stimulus_no)
+df$Mood <- as.factor(df$Mood)
+df$Artist <- as.factor(df$Artist)
+
+#Making the "JPG" stimuli valence score comparable to the "wav" stimulus valence
+df$Valence[df$Stimulus=="jpg" & !is.na(df$Stimulus)] <- (df$Valence[df$Stimulus=="jpg" & !is.na(df$Stimulus)]/10)+0.5
+
+```
+
+## Making two new dataframes
+```{r}
+#Making two new dataframes
+baseline <- subset(df, Condition == 0)
+baseline <- select(baseline, -c(Artist:Mood))
+primed <- subset(df, Condition == 1)
+```
+
+
+## First visualization of the data
+```{r}
+#Visualizing mean rating for each picture in each condition
+ggplot(df, aes(Picture_no,Rating, fill=Condition))+
+  stat_summary(fun.y = mean, geom = "bar", position = "dodge" )+
+  ggtitle("Comparing mean rating for different pictures by conditions")
+
+ggplot(df,aes(Valence,Rating, colour = Stimulus, shape = Stimulus))+
+  geom_point()+
+  geom_smooth(method = "lm")+
+  ggtitle("Rating after priming by valence")
+
+ggplot(baseline, aes(Picture_no,Rating, fill = Picture_gender))+
+  stat_summary(fun.y = mean,geom = "bar")+
+  stat_summary(fun.data = mean_cl_normal, geom = "errorbar", width = 0.2)+
+  ggtitle("Baseline rating of the pictures")
+
+```
+
+
+## Playing with some group_by functions
+```{r}
+#Mean of each group
+df %>% group_by(Mood,Stimulus) %>% summarise(mean(Valence))
+
+primed %>% group_by(Mood) %>% summarise(mean(Rating))
+
+stim <- primed %>% group_by(Mood,Picture_no) %>% summarise(mean(Rating))
+
+no_stim<- baseline %>% group_by(Picture_no) %>% summarise(mean(Rating))
+
+no_stim$mean_sad_stim <- stim[stim$Mood=="Sad",3]
+
+no_stim$mean_happy_stim <- stim[stim$Mood=="Hap",3]
+
+
+```
+
+
